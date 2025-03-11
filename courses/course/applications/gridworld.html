@@ -6,7 +6,34 @@
     <title>Gridworld Agent (Pathfinding) - DRL Course</title>
     <link rel="stylesheet" href="../../static/drl-course-css.css">
     <link rel="stylesheet" href="../../static/applications.css">
+    <style>
+        .code-concept {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .code-concept pre {
+            margin: 0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        @media screen and (max-width: 768px) {
+            .code-concept {
+                border-radius: 4px;
+            }
+            
+            .code-concept pre {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
 </head>
+
 <body>
     <header>
         <h1>Deep Reinforcement Learning: Project</h1>
@@ -294,6 +321,119 @@
                 </div>
             </div>
             
+            <!-- Q-Learning Algorithm Pseudocode -->
+            <div class="algorithm-explanation">
+                <h4>Q-Learning Algorithm Pseudocode</h4>
+                <div class="code-concept">
+            <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto;">
+            <span style="color: #569cd6;">Algorithm:</span> Q-Learning for Gridworld Pathfinding
+
+            <span style="color: #569cd6;">// Initialize environment and parameters</span>
+            Initialize Gridworld with start, goal, obstacles
+            Initialize Q(s,a) = 0 for all state-action pairs
+            Set learning_rate α = 0.1
+            Set discount_factor γ = 0.99
+            Set initial exploration_rate ε = 1.0
+            Set exploration_min = 0.01
+            Set exploration_decay = 0.995
+            Set max_episodes = 1000
+            Set max_steps = 100
+
+            <span style="color: #569cd6;">// Training loop</span>
+            For episode = 1 to max_episodes:
+                Initialize state s = start_position
+                
+                For step = 1 to max_steps:
+                    // Choose action using ε-greedy policy
+                    With probability ε:
+                        Choose action a randomly from possible actions
+                    Otherwise:
+                        Choose action a = argmax_a' Q(s, a')
+                    
+                    // Take action, observe reward and next state
+                    Take action a, observe next state s' and reward r
+                    
+                    // Update Q-value using the Q-learning update rule
+                    Q(s,a) = Q(s,a) + α * [r + γ * max_a' Q(s',a') - Q(s,a)]
+                    
+                    // Move to next state
+                    s = s'
+                    
+                    // If goal reached or maximum steps taken, end episode
+                    If s is goal or step = max_steps:
+                        Break
+                
+                // Decay exploration rate
+                ε = max(exploration_min, ε * exploration_decay)
+                
+                // Track performance metrics
+                track_episode_length(steps)
+                track_episode_reward(total_reward)
+
+            <span style="color: #569cd6;">// Extract policy from Q-values</span>
+            For each state s:
+                policy(s) = argmax_a Q(s,a)
+
+            <span style="color: #569cd6;">// Visualization and evaluation</span>
+            Visualize policy on grid with arrows
+            Run test episodes following the learned policy
+            Calculate average steps to goal
+            Calculate success rate
+            </pre>
+                </div>
+            </div>
+
+            <!-- Policy Visualization Pseudocode -->
+            <div class="algorithm-explanation">
+                <h4>Policy Visualization Pseudocode</h4>
+                <div class="code-concept">
+            <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto;">
+            <span style="color: #569cd6;">Function:</span> visualize_policy(Q_table, grid_size, start, goal, obstacles):
+                // Create a representation of the grid for visualization
+                grid = initialize_empty_grid(grid_size)
+                
+                // Mark special cells
+                grid[start] = "S"
+                grid[goal] = "G"
+                For each obstacle in obstacles:
+                    grid[obstacle] = "#"
+                
+                // Add arrows representing the optimal policy
+                For each state s in grid:
+                    If s is not start and s is not goal and s is not obstacle:
+                        best_action = argmax_a Q_table[s, a]
+                        If best_action == UP:
+                            grid[s] = "↑"
+                        Else If best_action == RIGHT:
+                            grid[s] = "→"
+                        Else If best_action == DOWN:
+                            grid[s] = "↓"
+                        Else If best_action == LEFT:
+                            grid[s] = "←"
+                
+                // Highlight the optimal path from start to goal
+                current = start
+                path = [current]
+                
+                While current != goal and len(path) < grid_size * grid_size:
+                    best_action = argmax_a Q_table[current, a]
+                    next_state = get_next_state(current, best_action)
+                    path.append(next_state)
+                    current = next_state
+                
+                // Color cells in the optimal path
+                For each state in path:
+                    highlight_cell(grid, state)
+                
+                // Draw the grid with policy arrows and highlighted path
+                draw_grid(grid)
+                
+                // Display additional metrics
+                display_metrics(avg_steps, success_rate, avg_reward)
+            </pre>
+                </div>
+            </div>
+
             <h3>Expected Results</h3>
             <p>After successful training, your agent should be able to:</p>
             <ul>
