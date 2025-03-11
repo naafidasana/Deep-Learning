@@ -262,6 +262,24 @@ code {
     transform: translateY(-2px);
 }
 
+.github-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--dark);
+    color: white;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.github-link:hover {
+    background-color: #34495e;
+}
+
+
 table {
     width: 100%;
     border-collapse: collapse;

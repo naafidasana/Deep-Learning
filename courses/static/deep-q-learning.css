@@ -43,10 +43,9 @@
 /* Title styling for better contrast */
 .intro-title {
     background-color: var(--light); /* Changed to white */
-    color: var(--dark); /* Changed text color to dark for contrast */
+    color: var(--dark); 
     padding: 2rem;
     margin: -2rem -2rem 2rem -2rem;
-    border-bottom: 3px solid var(--primary);
     text-align: center;
     font-size: 2.5rem;
 }
@@ -438,6 +437,7 @@
 .code-section.visible {
     display: none !important;
 }
+
 
 
 /* Responsive adjustments */

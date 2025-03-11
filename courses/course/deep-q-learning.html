@@ -30,9 +30,20 @@
         </ul>
     </nav>
     
+    <div style="text-align: center; margin: 2rem 0;">
+        <a href="applications.html" class="button">Explore DRL Applications</a>
+        <a href="https://github.com/EngineerProjects/Deep-Reinforcement-Learning" target="_blank" class="github-link" style="margin-left: 1rem;">
+            <svg height="20" viewBox="0 0 16 16" width="20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+            </svg>
+            View Code Examples
+        </a>
+    </div>
+    
     <main class="dql-container">
         <!-- Introduction Section -->
         <section class="concept-section" id="introduction">
+
             <div class="intro-title">
                 <h2>Introduction to Deep Q-Learning</h2>
             </div>
@@ -476,9 +487,9 @@
                         <div class="algorithm-diagram" style="margin: 1rem 0;">
                             <svg width="400" height="200" viewBox="0 0 400 200">
                                 <!-- Main Q-Network -->
-                                <rect x="30" y="30" width="160" height="80" rx="5" fill="#3498db"/>
-                                <text x="110" y="75" font-size="14" text-anchor="middle" fill="white">Main Q-Network</text>
-                                <text x="110" y="95" font-size="12" text-anchor="middle" fill="white">(Updated every step)</text>
+                                <rect x="0" y="30" width="160" height="80" rx="5" fill="#3498db"/>
+                                <text x="80" y="75" font-size="14" text-anchor="middle" fill="white">Main Q-Network</text>
+                                <text x="80" y="95" font-size="12" text-anchor="middle" fill="white">(Updated every step)</text>
                                 
                                 <!-- Target Q-Network -->
                                 <rect x="210" y="30" width="160" height="80" rx="5" fill="#9b59b6"/>
@@ -820,12 +831,12 @@
                     <!-- Arrows -->
                     <!-- Agent to Environment -->
                     <path d="M110 250 L110 130" stroke="#333" stroke-width="2" marker-end="url(#arrowhead4)"/>
-                    <text x="85" y="190" font-size="14" text-anchor="middle">Action</text>
+                    <text x="85" y="160" font-size="14" text-anchor="middle">Action</text>
                     
                     <!-- Environment to Agent -->
-                    <path d="M170 90 L220 90 L220 270 L170 270" stroke="#333" stroke-width="2" marker-end="url(#arrowhead4)"/>
-                    <text x="220" y="180" font-size="14" text-anchor="middle">State, Reward</text>
-                    
+                    <path d="M130 130 L130 250" stroke="#333" stroke-width="2" marker-end="url(#arrowhead4)"/>
+                    <text x="182" y="180" font-size="14" text-anchor="middle">State, Reward</text>
+                                        
                     <!-- Agent to Replay Buffer -->
                     <path d="M170 250 L250 190" stroke="#333" stroke-width="2" marker-end="url(#arrowhead4)"/>
                     <text x="200" y="210" font-size="14" text-anchor="middle">Store</text>
@@ -837,16 +848,16 @@
                     <text x="500" y="230" font-size="14" text-anchor="middle">Batch</text>
                     
                     <!-- Main Network to Target Network -->
-                    <path d="M610 250 L610 130" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead4)"/>
-                    <text x="640" y="190" font-size="14" text-anchor="middle">Copy</text>
-                    <text x="640" y="210" font-size="14" text-anchor="middle">Weights</text>
-                    <text x="640" y="230" font-size="14" text-anchor="middle">(Every C steps)</text>
-                    
+                    <path d="M580 250 L580 130" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead4)"/>
+                    <text x="520" y="145" font-size="14" text-anchor="middle">Copy</text>
+                    <text x="520" y="165" font-size="14" text-anchor="middle">Weights</text>
+                    <text x="520" y="185" font-size="14" text-anchor="middle">(Every C steps)</text>
+
                     <!-- Target Network to Main Network -->
-                    <path d="M550 90 L500 90 L500 250 L550 250" stroke="#333" stroke-width="2" marker-end="url(#arrowhead4)"/>
-                    <text x="470" y="150" font-size="14" text-anchor="middle">Target</text>
-                    <text x="470" y="170" font-size="14" text-anchor="middle">Values</text>
-                    
+                    <path d="M640 130 L640 250" stroke="#333" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#arrowhead4)"/>
+                    <text x="670" y="190" font-size="14" text-anchor="middle">Target</text>
+                    <text x="670" y="210" font-size="14" text-anchor="middle">Values</text>
+
                     <!-- Gradient Update -->
                     <rect x="450" y="330" width="120" height="40" rx="5" fill="#ecf0f1" stroke="#bdc3c7"/>
                     <text x="510" y="355" font-size="14" text-anchor="middle">Gradient Update</text>
@@ -1695,7 +1706,6 @@
         </section>
     </main>
 
-    <!-- Add this at the end of the body -->
     <div class="pseudocode-overlay" id="pseudocodeOverlay">
         <div class="pseudocode-container">
             <button class="close-pseudocode" id="closePseudocode">×</button>
