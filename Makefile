@@ -1,8 +1,13 @@
-VENV := .venv
-PYTHON := $(VENV)/bin/python
+# Default Variables
+VENV_NAME := dl_uv
+CONDA_ENV_NAME := dl_conda
+VENV_PYTHON := $(VENV_NAME)/bin/python
+PYTHON := 3.12
 
-.PHONY: setup test lint format pre-commit docs coverage serve-coverage clean help all
 
+.PHONY: setup conda_setup clean help
+
+# UV Environment Setup
 setup:
 	@echo "Setting up development environment..."
 	@if ! command -v uv > /dev/null; then \
@@ -11,64 +16,46 @@ setup:
 		exit 1; \
 	fi
 	@echo "Creating virtual environment with UV..."
-	@uv venv $(VENV)
+	@uv venv $(VENV_NAME)
 	@echo "Installing project dependencies from pyproject.toml..."
-	@uv pip install --python $(PYTHON) -e .
-	@echo "Setup completed successfully!"
+	@uv pip install --python $(VENV_PYTHON) -r requirements.txt
+	@echo "Setup completed successfully! Activate with: source ./$(VENV_NAME)/bin/activate"
 
-install:
-	@uv pip install --python $(PYTHON) -e .
+# Conda Environment Setup
+conda_setup:
+	@echo "Creating Conda environment '$(CONDA_ENV_NAME)'..."
+	@conda create -n $(CONDA_ENV_NAME) python=$(PYTHON) -y || (echo "Failed. Ensure Conda is installed." && exit 1)
+	@conda activate $(CONDA_ENV_NAME)
+	@echo "Installing project dependencies from pyproject.toml..."
+	@pip install -r requirements.txt
+	@echo "✅ Done. Activate with: conda activate $(CONDA_ENV_NAME)"
 
-test:
-	@echo "Running tests..."
-	@uv run --python $(PYTHON) pytest -xvs tests/
+# Cleanup
+clean: clean_venv clean_conda clean_pyc
+	@echo "🧹 All environments and cache cleaned"
 
-lint:
-	@echo "Running linters..."
-	@uv run --python $(PYTHON) ruff check .
-	@uv run --python $(PYTHON) mypy --show-error-codes enterprise_ai/
+clean_venv:
+	@if [ -d "$(VENV_NAME)" ]; then \
+		echo "Removing UV environment '$(VENV_NAME)'..."; \
+		rm -rf $(VENV_NAME); \
+	fi
 
-format:
-	@echo "Formatting code..."
-	@uv run --python $(PYTHON) ruff format .
-	@uv run --python $(PYTHON) ruff check --fix .
-	@echo "Formatting Markdown files..."
-	@which mdformat >/dev/null 2>&1 || uv pip install mdformat
-	@mdformat .
+clean_conda:
+	@if conda env list | grep -q "$(CONDA_ENV_NAME)"; then \
+		echo "Removing Conda environment '$(CONDA_ENV_NAME)'..."; \
+		conda remove -n $(CONDA_ENV_NAME) --all -y; \
+	fi
 
-pre-commit:
-	@echo "Running pre-commit hooks..."
-	@uv run --python $(PYTHON) pre-commit run --all-files
+clean_pyc:
+	@find . -name "*.pyc" -delete -o -name "__pycache__" -exec rm -rf {} +
 
-docs:
-	@echo "Generating documentation..."
-	@uv run --python $(PYTHON) pdoc -o docs --html --force enterprise_ai
-
-coverage:
-	@echo "Generating coverage report..."
-	@$(VENV)/bin/pytest --cov=enterprise_ai --cov-report=html
-
-serve-coverage:
-	@echo "Serving coverage report on http://localhost:8000"
-	@python3 -m http.server --directory htmlcov 8000
-
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .ruff_cache/ .mypy_cache/ htmlcov/ .coverage logs/
-	@find . -type d -name __pycache__ -exec rm -rf {} +
-
-all: lint test pre-commit coverage
+# Help
 help:
-	@echo "Enterprise-AI Development Makefile"
-	@echo "=================================="
-	@echo "setup          - Create virtual env and install deps"
-	@echo "install        - Install package in dev mode"
-	@echo "test           - Run tests with verbose output"
-	@echo "lint           - Run static analysis checks"
-	@echo "format         - Format and fix code"
-	@echo "docs           - Generate API documentation"
-	@echo "coverage       - Generate test coverage report"
-	@echo "serve-coverage - Serve coverage report on port 8000"
-	@echo "clean          - Remove build artifacts"
-	@echo "pre-commit     - Run all pre-commit checks"
-	@echo "all            - Run full quality checks (lint + test + coverage)"
+	@echo "Deep Learning Project - Makefile"
+	@echo "--------------------------------"
+	@echo "make setup        # Create UV env 'dl_uv' (Python 3.12)"
+	@echo "make conda_setup  # Create Conda env 'dl_conda' (Python 3.12)"
+	@echo "make clean        # Remove all environments and cache"
+	@echo "make clean_venv   # Remove only UV environment"
+	@echo "make clean_conda  # Remove only Conda environment"
+	@echo "make clean_pyc    # Remove Python cache files"

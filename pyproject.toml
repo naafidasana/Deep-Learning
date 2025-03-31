@@ -1,9 +1,14 @@
 [project]
-name = "drl"
+name = "drl-learning"
 version = "0.1.0"
-description = "Add your description here"
+description = "Practical projects for learning deep reinforcement learning from the ground up"
+authors = [
+    {name = "O. A. Stéphane KPOVIESSI"}
+]
 readme = "README.md"
 requires-python = ">=3.12"
+license = "MIT"
+
 dependencies = [
     "gymnasium>=1.1.1",
     "matplotlib>=3.10.1",
@@ -13,3 +18,8 @@ dependencies = [
     "rich>=13.9.4",
     "torch>=2.6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/EngineerProjects/Deep-Learning"
+Repository = "https://github.com/EngineerProjects/Deep-Learning"
+Issues = "https://github.com/EngineerProjects/Deep-Learning/issues"
