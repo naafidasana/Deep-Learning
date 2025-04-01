@@ -2,6 +2,8 @@
 
 This repository is designed as a comprehensive learning path for artificial intelligence, starting from fundamental mathematical concepts and progressing to advanced deep reinforcement learning techniques. The primary goal is to build AI components from scratch to gain a deep understanding of their inner workings before utilizing pre-built libraries.
 
+📋 **[View the complete learning roadmap](ROADMAP.md)**
+
 ## 🎯 Project Goals
 
 - Master the mathematical foundations of machine learning and deep learning
@@ -103,6 +105,42 @@ The recommended approach to this repository is sequential:
 4. Finally explore reinforcement learning
 
 Each module contains both theoretical explanations and practical implementations.
+
+## 🗺️ Learning Roadmap Overview
+
+Below is a simplified overview of our learning path. For the detailed roadmap with progress tracking, see [ROADMAP.md](ROADMAP.md).
+
+### 📌 Core Learning Path
+
+1. **Mathematical Foundations**
+   - Linear Algebra
+   - Probability & Statistics
+   - Calculus & Optimization
+
+2. **Machine Learning Foundations**
+   - Information Theory
+   - Supervised Learning
+   - Unsupervised Learning
+
+3. **Deep Learning**
+   - Neural Networks Fundamentals
+   - Convolutional Neural Networks
+   - Sequence Models
+   - Generative Models
+
+4. **Reinforcement Learning**
+   - Fundamentals of RL
+   - Deep Reinforcement Learning
+   - Advanced RL Topics
+
+5. **Implementation Projects**
+   - From-Scratch Implementations
+   - Application Projects
+   - Paper Implementations
+
+### 📊 Current Progress
+
+Track our implementation progress and join in at any stage. See [ROADMAP.md](ROADMAP.md) for detailed progress tracking.
 
 ## 🤝 Contributing
 
