@@ -1,25 +1,78 @@
 [project]
-name = "drl-learning"
+name = "deep-learning-fundamentals"
 version = "0.1.0"
-description = "Practical projects for learning deep reinforcement learning from the ground up"
+description = "A comprehensive learning path for artificial intelligence from linear algebra to advanced deep reinforcement learning"
 authors = [
     {name = "O. A. Stéphane KPOVIESSI"}
 ]
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
-
 dependencies = [
-    "gymnasium>=1.1.1",
-    "matplotlib>=3.10.1",
+    # Core libraries
     "numpy>=2.2.3",
-    "pybullet>=3.2.7",
-    "pygame>=2.6.1",
-    "rich>=13.9.4",
+    "matplotlib>=3.10.1",
+    "scipy>=1.12.0",
+    "pandas>=2.2.0",
+    
+    # Machine Learning
+    "scikit-learn>=1.4.0",
+    
+    # Deep Learning
     "torch>=2.6.0",
+    "torchvision>=0.17.0",
+    
+    # Reinforcement Learning
+    "gymnasium>=1.1.1",
+    "pygame>=2.6.1",
+    "pybullet>=3.2.7",
+    
+    # Utilities
+    "rich>=13.9.4",
+    "tqdm>=4.66.2",
+    "jupyter>=1.0.0",
+    "pytest>=8.0.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "black>=24.1.0",
+    "isort>=5.13.2",
+    "flake8>=7.0.0",
+    "mypy>=1.8.0",
+]
+
+visualization = [
+    "seaborn>=0.13.0",
+    "plotly>=5.18.0",
+]
+
+deep-learning-extra = [
+    "transformers>=4.40.0",
+    "tensorboard>=2.15.1",
+]
+
+[build-system]
+requires = ["setuptools>=69.0.0", "wheel>=0.41.2"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 
 [project.urls]
 Homepage = "https://github.com/EngineerProjects/Deep-Learning"
 Repository = "https://github.com/EngineerProjects/Deep-Learning"
 Issues = "https://github.com/EngineerProjects/Deep-Learning/issues"
+Documentation = "https://github.com/EngineerProjects/Deep-Learning/wiki"
