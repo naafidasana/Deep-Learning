@@ -2,7 +2,7 @@
 
 This repository is designed as a comprehensive learning path for artificial intelligence, starting from fundamental mathematical concepts and progressing to advanced deep reinforcement learning techniques. The primary goal is to build AI components from scratch to gain a deep understanding of their inner workings before utilizing pre-built libraries.
 
-📋 **[View the complete learning roadmap](ROADMAP.md)**
+📋 **[View the complete learning roadmap](Roadmap.md)**
 
 ## 🎯 Project Goals
 
