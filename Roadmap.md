@@ -5,6 +5,13 @@ This roadmap outlines a comprehensive learning path from mathematical foundation
 ## 📌 Mathematical Foundations
 
 ### 🔢 Linear Algebra
+ - [ ]Array Foundations
+  - [x] NArray implementation with creation methods
+  - [x] Shape and dimension handling
+  - [x] Data type inference and conversion
+  - [x] Random array generation
+  - [x] Identity and eye matrices
+  Identity and eye matrices
 - [ ] **Vector Operations**
   - [ ] Vector addition, subtraction
   - [ ] Scalar multiplication
