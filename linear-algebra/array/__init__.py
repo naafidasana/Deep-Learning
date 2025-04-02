@@ -1,3 +1,3 @@
-from array.array import NArray
+from array.array import NDArray
 
-__all__ = ["NArray"]
+__all__ = ["NDArray"]

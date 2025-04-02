@@ -1,94 +1,67 @@
 import random
-from typing import List, Tuple, Optional, Any, Union
+from typing import List, Tuple, Optional, Any, Union, Sequence
 
-class NArray:
+class NDArray:
     """
-    Base class for N-dimensional arrays with comprehensive functionality.
+    Base class for N-dimensional arrays with core functionality.
     
-    This class provides the foundation for all array operations in the linear algebra library.
-    It handles N-dimensional data structures and implements core array operations with
-    operator overloading for intuitive usage.
+    This class provides the foundation for array operations in the linear algebra library.
+    It handles N-dimensional data structures and implements basic array operations.
     
-    Arrays should be created using the class methods:
-        NArray.array() - Create from data
-        NArray.zeros() - Create array of zeros with shape
-        NArray.ones() - Create array of ones with shape
-        NArray.eye() - Create a 2D array with ones on the diagonal and zeros elsewhere
-        NArray.identity() - Create a square identity matrix
-        NArray.random() - Create an array with random values between 0 and 1
-        NArray.uniform() - Create an array with random values from a uniform distribution
-        NArray.normal() - Create an array with random values from a normal distribution
-        NArray.randint() - Create an array with random integer values
+    Arrays can be created using the static methods:
+        NDArray.array() - Create from data
+        NDArray.zeros() - Create array of zeros with shape
+        NDArray.ones() - Create array of ones with shape
+        NDArray.eye() - Create a 2D array with ones on the diagonal and zeros elsewhere
+        NDArray.identity() - Create a square identity matrix
+        NDArray.arange() - Create an array with evenly spaced values within a given interval
+        NDArray.linspace() - Create an array with evenly spaced values within a given interval
     
     Attributes:
         data: Nested list structure containing the array elements.
-        _shape: Tuple representing dimensions of the array.
-        _dtype: Data type of the array elements.
-        _size: Total number of elements in the array.
+        shape: Tuple representing dimensions of the array.
+        dtype: Data type of the array elements.
+        size: Total number of elements in the array.
     """
     
-    def __init__(
-        self,
-        data: Optional[List] = None,
-        shape: Optional[Tuple[int, ...]] = None,
-        dtype: Optional[type] = None,
-        _internal_call: bool = False
-    ) -> None:
+    def __init__(self, data: Any = None, dtype: Optional[type] = None) -> None:
         """
-        Initialize an N-dimensional array. This should not be called directly.
-        Instead, use the class methods: array(), zeros(), ones(), etc.
+        Initialize an N-dimensional array.
         
         Args:
             data: Data to initialize the array with.
-            shape: Shape of the array if data is not provided.
             dtype: Data type for the array elements.
-            _internal_call: Flag to indicate if constructor was called internally.
         
         Raises:
-            AssertionError: If neither data nor shape is provided.
             ValueError: If the input data structure is not valid or has inconsistent dimensions.
-            RuntimeError: If constructor is called directly instead of through class methods.
         """
-        if not _internal_call:
-            raise RuntimeError(
-                "Direct instantiation of NArray is not allowed. "
-                "Use NArray.array(), NArray.zeros(), NArray.ones(), or other class methods instead."
-            )
+        # Handle scalar inputs
+        if not isinstance(data, (list, tuple)):
+            self.data = data
+            self._shape = ()  # Scalar has empty shape
+            self._dtype = type(data) if dtype is None else dtype
+            self._size = 1  # Scalar has size 1
+            return
+            
+        # Handle list/tuple inputs
+        if not data:  # Empty list
+            self.data = []
+            self._shape = (0,)
+            self._dtype = dtype or float
+            self._size = 0
+            return
+            
+        # Validate and process data
+        self.data = self._validate_data(data)
+        self._shape = self._compute_shape(self.data)
+        self._dtype = dtype or self._infer_dtype(self.data)
         
-        if data is None and shape is None:
-            self._shape = ()
-        
-        # Use instance variables instead of properties for initialization
-        self._dtype = dtype
-        
-        # Create array from either data or shape
-        if data is None:
-            # Create empty array of zeros with given shape
-            self.data = self._zeros_internal(shape, self._dtype or float)
-            self._shape = shape
-            # Calculate size from shape
-            self._size = self._calculate_size_from_shape(shape)
-        else:
-            # Validate and convert data
-            if isinstance(data, (int, float)):
-                # Handle scalar input
-                self.data = data
-                self._shape = ()
-                self._dtype = self._dtype or type(data)
-                self._size = 1  # Scalar has size 1
-            else:
-                # Handle list/tuple input
-                # Validate data structure and shape consistency
-                self.data = self._validate_data(data)
-                
-                # Apply type conversion if needed
-                if dtype:
-                    self.data = self._cast_to_type(self.data, dtype)
-                
-                self._shape = self._compute_shape(data)
-                self._dtype = dtype if dtype else self._infer_dtype(data)
-                # Calculate size from data
-                self._size = self._calculate_size_from_data(self.data)
+        # Ensure all elements have the correct type if dtype is specified
+        if dtype:
+            self.data = self._cast_to_type(self.data, self._dtype)
+            
+        # Calculate size
+        self._size = self._calculate_size_from_data(self.data)
 
     def _validate_data(self, data: Union[List, Tuple, Any]) -> Any:
         """
@@ -196,25 +169,6 @@ class NArray:
                 
         return [self._cast_to_type(item, dtype) for item in data]
     
-    def _calculate_size_from_shape(self, shape: Tuple[int, ...]) -> int:
-        """
-        Calculate the total number of elements from the shape.
-        
-        Args:
-            shape: The shape of the array.
-            
-        Returns:
-            Total number of elements.
-        """
-        if not shape:
-            return 1  # Scalar has size 1
-            
-        # Multiply all dimensions
-        size = 1
-        for dim in shape:
-            size *= dim
-        return size
-    
     def _calculate_size_from_data(self, data: Any) -> int:
         """
         Calculate the total number of elements in the data.
@@ -240,7 +194,8 @@ class NArray:
         # For 1D arrays
         return len(data)
     
-    def _zeros_internal(self, shape: Tuple[int, ...], dtype: Optional[type] = None) -> Any:
+    @staticmethod
+    def _zeros_internal(shape: Tuple[int, ...], dtype: Optional[type] = None) -> Any:
         """
         Create a nested list of zeros with the given shape.
         
@@ -264,9 +219,10 @@ class NArray:
             return [dtype(0)] * shape[0]
             
         # Handle multi-dimensional arrays recursively
-        return [self._zeros_internal(shape[1:], dtype) for _ in range(shape[0])]
+        return [NDArray._zeros_internal(shape[1:], dtype) for _ in range(shape[0])]
     
-    def _ones_internal(self, shape: Tuple[int, ...], dtype: Optional[type] = None) -> Any:
+    @staticmethod
+    def _ones_internal(shape: Tuple[int, ...], dtype: Optional[type] = None) -> Any:
         """
         Create a nested list of ones with the given shape.
         
@@ -290,36 +246,10 @@ class NArray:
             return [dtype(1)] * shape[0]
             
         # Handle multi-dimensional arrays recursively
-        return [self._ones_internal(shape[1:], dtype) for _ in range(shape[0])]
+        return [NDArray._ones_internal(shape[1:], dtype) for _ in range(shape[0])]
     
-    def _full_internal(self, shape: Tuple[int, ...], value: Any, dtype: Optional[type] = None) -> Any:
-        """
-        Create a nested list of the given value with the given shape.
-        
-        Args:
-            shape: Dimensions of the array.
-            value: Value to fill the array with.
-            dtype: Data type for the elements.
-            
-        Returns:
-            Nested list of the given value.
-        """
-        dtype = dtype or type(value)
-        
-        # Handle empty shape
-        if not shape:
-            return value
-            
-        # Handle 1D arrays
-        if len(shape) == 1:
-            if shape[0] == 0:
-                return []
-            return [value] * shape[0]
-            
-        # Handle multi-dimensional arrays recursively
-        return [self._full_internal(shape[1:], value, dtype) for _ in range(shape[0])]
-    
-    def _eye_internal(self, n: int, m: Optional[int] = None, k: int = 0, dtype: Optional[type] = None) -> List[List]:
+    @staticmethod
+    def _eye_internal(n: int, m: Optional[int] = None, k: int = 0, dtype: Optional[type] = None) -> List[List]:
         """
         Create a 2D array with ones on the diagonal and zeros elsewhere.
         
@@ -348,150 +278,9 @@ class NArray:
                 
         return result
     
-    def _random_internal(self, shape: Tuple[int, ...], seed: Optional[int] = None, 
-                        decimals: Optional[int] = None) -> Any:
-        """
-        Create a nested list of random values between 0 and 1 with the given shape.
-        
-        Args:
-            shape: Dimensions of the array.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
-            
-        Returns:
-            Nested list of random values.
-        """
-        # Set random seed if provided
-        if seed is not None:
-            random.seed(seed)
-        
-        # Handle empty shape
-        if not shape:
-            val = random.random()
-            return round(val, decimals) if decimals is not None else val
-            
-        # Handle 1D arrays
-        if len(shape) == 1:
-            if shape[0] == 0:
-                return []
-            result = []
-            for _ in range(shape[0]):
-                val = random.random()
-                result.append(round(val, decimals) if decimals is not None else val)
-            return result
-            
-        # Handle multi-dimensional arrays recursively
-        return [self._random_internal(shape[1:], None, decimals) for _ in range(shape[0])]
-
-    def _uniform_internal(self, low: float, high: float, shape: Tuple[int, ...], 
-                        seed: Optional[int] = None, decimals: Optional[int] = None) -> Any:
-        """
-        Create a nested list of random values from a uniform distribution with the given shape.
-        
-        Args:
-            low: Lower bound of the distribution.
-            high: Upper bound of the distribution.
-            shape: Dimensions of the array.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
-            
-        Returns:
-            Nested list of random values.
-        """
-        # Set random seed if provided
-        if seed is not None:
-            random.seed(seed)
-        
-        # Handle empty shape
-        if not shape:
-            val = random.uniform(low, high)
-            return round(val, decimals) if decimals is not None else val
-            
-        # Handle 1D arrays
-        if len(shape) == 1:
-            if shape[0] == 0:
-                return []
-            result = []
-            for _ in range(shape[0]):
-                val = random.uniform(low, high)
-                result.append(round(val, decimals) if decimals is not None else val)
-            return result
-            
-        # Handle multi-dimensional arrays recursively
-        return [self._uniform_internal(low, high, shape[1:], None, decimals) for _ in range(shape[0])]
-
-    def _normal_internal(self, loc: float, scale: float, shape: Tuple[int, ...], 
-                        seed: Optional[int] = None, decimals: Optional[int] = None) -> Any:
-        """
-        Create a nested list of random values from a normal distribution with the given shape.
-        
-        Args:
-            loc: Mean of the distribution.
-            scale: Standard deviation of the distribution.
-            shape: Dimensions of the array.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
-            
-        Returns:
-            Nested list of random values.
-        """
-        # Set random seed if provided
-        if seed is not None:
-            random.seed(seed)
-        
-        # Handle empty shape
-        if not shape:
-            val = random.normalvariate(loc, scale)
-            return round(val, decimals) if decimals is not None else val
-            
-        # Handle 1D arrays
-        if len(shape) == 1:
-            if shape[0] == 0:
-                return []
-            result = []
-            for _ in range(shape[0]):
-                val = random.normalvariate(loc, scale)
-                result.append(round(val, decimals) if decimals is not None else val)
-            return result
-            
-        # Handle multi-dimensional arrays recursively
-        return [self._normal_internal(loc, scale, shape[1:], None, decimals) for _ in range(shape[0])]
-
-    def _randint_internal(self, low: int, high: int, shape: Tuple[int, ...], 
-                        seed: Optional[int] = None, decimals: Optional[int] = None) -> Any:
-        """
-        Create a nested list of random integers with the given shape.
-        
-        Args:
-            low: Lower bound of the distribution (inclusive).
-            high: Upper bound of the distribution (exclusive).
-            shape: Dimensions of the array.
-            seed: Random seed for reproducibility.
-            decimals: Not used for integers, but kept for API consistency.
-            
-        Returns:
-            Nested list of random integers.
-        """
-        # Set random seed if provided
-        if seed is not None:
-            random.seed(seed)
-        
-        # Handle empty shape
-        if not shape:
-            return random.randint(low, high - 1)
-            
-        # Handle 1D arrays
-        if len(shape) == 1:
-            if shape[0] == 0:
-                return []
-            return [random.randint(low, high - 1) for _ in range(shape[0])]
-            
-        # Handle multi-dimensional arrays recursively
-        return [self._randint_internal(low, high, shape[1:], None, decimals) for _ in range(shape[0])]
-    
-    # Class methods for array creation
-    @classmethod
-    def array(cls, data: Any, dtype: Optional[type] = None) -> 'NArray':
+    # Static methods for array creation
+    @staticmethod
+    def array(data: Any, dtype: Optional[type] = None) -> 'NDArray':
         """
         Create a new array from data.
         
@@ -500,12 +289,12 @@ class NArray:
             dtype: Data type for the array elements.
             
         Returns:
-            New NArray instance.
+            New NDArray instance.
         """
-        return cls(data=data, dtype=dtype, _internal_call=True)
+        return NDArray(data=data, dtype=dtype)
     
-    @classmethod
-    def zeros(cls, shape: Tuple[int, ...], dtype: Optional[type] = None) -> 'NArray':
+    @staticmethod
+    def zeros(shape: Tuple[int, ...], dtype: Optional[type] = None) -> 'NDArray':
         """
         Create an array of zeros with the given shape.
         
@@ -514,12 +303,13 @@ class NArray:
             dtype: Data type for the elements.
             
         Returns:
-            New NArray instance filled with zeros.
+            New NDArray instance filled with zeros.
         """
-        return cls(shape=shape, dtype=dtype, _internal_call=True)
+        data = NDArray._zeros_internal(shape, dtype)
+        return NDArray(data=data, dtype=dtype)
     
-    @classmethod
-    def ones(cls, shape: Tuple[int, ...], dtype: Optional[type] = None) -> 'NArray':
+    @staticmethod
+    def ones(shape: Tuple[int, ...], dtype: Optional[type] = None) -> 'NDArray':
         """
         Create an array of ones with the given shape.
         
@@ -528,35 +318,13 @@ class NArray:
             dtype: Data type for the elements.
             
         Returns:
-            New NArray instance filled with ones.
+            New NDArray instance filled with ones.
         """
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        # Replace zeros with ones
-        instance.data = instance._ones_internal(shape, dtype or float)
-        return instance
+        data = NDArray._ones_internal(shape, dtype)
+        return NDArray(data=data, dtype=dtype)
     
-    @classmethod
-    def full(cls, shape: Tuple[int, ...], value: Any, dtype: Optional[type] = None) -> 'NArray':
-        """
-        Create an array with the given shape and fill it with the given value.
-        
-        Args:
-            shape: Dimensions of the array.
-            value: Value to fill the array with.
-            dtype: Data type for the elements.
-            
-        Returns:
-            New NArray instance filled with the given value.
-        """
-        # Ensure dtype has a default value based on the value's type
-        dtype = dtype or type(value)
-        
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        instance.data = instance._full_internal(shape, value, dtype)
-        return instance
-    
-    @classmethod
-    def eye(cls, n: int, m: Optional[int] = None, k: int = 0, dtype: Optional[type] = None) -> 'NArray':
+    @staticmethod
+    def eye(n: int, m: Optional[int] = None, k: int = 0, dtype: Optional[type] = None) -> 'NDArray':
         """
         Create a 2D array with ones on the diagonal and zeros elsewhere.
         
@@ -572,7 +340,7 @@ class NArray:
             dtype: Data type for the elements.
             
         Returns:
-            New NArray instance with ones on the specified diagonal.
+            New NDArray instance with ones on the specified diagonal.
             
         Examples:
             eye(3) creates a 3x3 identity matrix.
@@ -580,17 +348,11 @@ class NArray:
             eye(3, 3, 1) creates a 3x3 matrix with ones on the first super-diagonal.
             eye(3, 3, -1) creates a 3x3 matrix with ones on the first sub-diagonal.
         """
-        # Ensure dtype has a default value
-        dtype = dtype or float
-        
-        instance = cls(_internal_call=True, dtype=dtype)
-        instance.data = instance._eye_internal(n, m, k, dtype)
-        instance._shape = (n, m if m is not None else n)
-        instance._size = n * (m if m is not None else n)
-        return instance
+        data = NDArray._eye_internal(n, m, k, dtype)
+        return NDArray(data=data, dtype=dtype)
     
-    @classmethod
-    def identity(cls, n: int, dtype: Optional[type] = None) -> 'NArray':
+    @staticmethod
+    def identity(n: int, dtype: Optional[type] = None) -> 'NDArray':
         """
         Create a square identity matrix of size n x n.
         
@@ -602,7 +364,7 @@ class NArray:
             dtype: Data type for the elements.
             
         Returns:
-            New NArray instance representing an identity matrix.
+            New NDArray instance representing an identity matrix.
             
         Example:
             identity(3) creates a 3x3 identity matrix:
@@ -611,112 +373,226 @@ class NArray:
              [0, 0, 1]]
         """
         # Use the eye method with default parameters
-        return cls.eye(n, dtype=dtype)
+        return NDArray.eye(n, dtype=dtype)
     
-    @classmethod
-    def uniform(cls, low: float, high: float, shape: Tuple[int, ...], 
-                dtype: Optional[type] = None, 
-                seed: Optional[int] = None, 
-                decimals: Optional[int] = None) -> 'NArray':
+    @staticmethod
+    def arange(start: float, stop: Optional[float] = None, step: float = 1, 
+               dtype: Optional[type] = None) -> 'NDArray':
         """
-        Create an array filled with random numbers from a uniform distribution.
+        Create an array with evenly spaced values within a given interval.
         
         Args:
-            low: Lower bound of the distribution.
-            high: Upper bound of the distribution.
-            shape: Dimensions of the array.
-            dtype: Data type for the elements.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
+            start: Start of interval. If stop is None, start at 0 and stop at this value.
+            stop: End of interval. The endpoint is not included.
+            step: Spacing between values.
+            dtype: Data type of output array.
             
         Returns:
-            New NArray instance filled with random numbers from a uniform distribution.
+            NDArray instance with evenly spaced values.
+            
+        Examples:
+            arange(10) -> [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            arange(1, 11) -> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            arange(0, 5, 0.5) -> [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5]
         """
-        # Ensure dtype has a default value
-        dtype = dtype or float
+        if stop is None:
+            stop = start
+            start = 0
+            
+        # Calculate the number of elements
+        num = int((stop - start) / step)
         
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        instance.data = instance._uniform_internal(low, high, shape, seed, decimals)
-        return instance
+        # Generate the values
+        values = [start + i * step for i in range(num)]
+        
+        # Apply dtype if provided
+        if dtype:
+            values = [dtype(x) for x in values]
+            
+        return NDArray(data=values, dtype=dtype)
     
-    @classmethod
-    def normal(cls, loc: float, scale: float, shape: Tuple[int, ...], 
-               dtype: Optional[type] = None, 
-               seed: Optional[int] = None, 
-               decimals: Optional[int] = None) -> 'NArray':
+    @staticmethod
+    def linspace(start: float, stop: float, num: int = 50, 
+                 endpoint: bool = True, dtype: Optional[type] = None) -> 'NDArray':
         """
-        Create an array filled with random numbers from a normal (Gaussian) distribution.
+        Create an array with num evenly spaced values over the specified interval.
         
         Args:
-            loc: Mean of the distribution.
-            scale: Standard deviation of the distribution.
-            shape: Dimensions of the array.
-            dtype: Data type for the elements.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
+            start: The starting value of the sequence.
+            stop: The end value of the sequence.
+            num: Number of samples to generate.
+            endpoint: If True, stop is the last sample. Otherwise, stop is not included.
+            dtype: Data type of output array.
             
         Returns:
-            New NArray instance filled with random numbers from a normal distribution.
+            NDArray instance with evenly spaced values.
+            
+        Examples:
+            linspace(0, 1, 5) -> [0.0, 0.25, 0.5, 0.75, 1.0]
+            linspace(0, 1, 5, endpoint=False) -> [0.0, 0.2, 0.4, 0.6, 0.8]
         """
-        # Ensure dtype has a default value
-        dtype = dtype or float
-        
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        instance.data = instance._normal_internal(loc, scale, shape, seed, decimals)
-        return instance
+        if num <= 0:
+            raise ValueError("Number of samples must be positive")
+            
+        if endpoint:
+            # Include the endpoint
+            step = (stop - start) / (num - 1) if num > 1 else 0
+            values = [start + i * step for i in range(num)]
+        else:
+            # Exclude the endpoint
+            step = (stop - start) / num
+            values = [start + i * step for i in range(num)]
+            
+        # Apply dtype if provided
+        if dtype:
+            values = [dtype(x) for x in values]
+            
+        return NDArray(data=values, dtype=dtype)
     
-    @classmethod
-    def random(cls, shape: Tuple[int, ...], 
-               dtype: Optional[type] = None,
-               seed: Optional[int] = None,
-               decimals: Optional[int] = None) -> 'NArray':
+    # Instance methods for array manipulation
+    
+    def flatten(self) -> 'NDArray':
         """
-        Create an array filled with random numbers from a uniform distribution between 0 and 1.
+        Flatten the array to 1D.
+        
+        Returns:
+            Flattened NDArray.
+            
+        Example:
+            If arr has shape (2, 3), arr.flatten() will have shape (6,)
+        """
+        if not self._shape:  # Scalar
+            return NDArray([self.data], dtype=self._dtype)
+            
+        flat_data = self._flatten_list(self.data)
+        return NDArray(flat_data, dtype=self._dtype)
+    
+    def _flatten_list(self, data: Any) -> List:
+        """
+        Recursively flatten nested lists.
         
         Args:
-            shape: Dimensions of the array.
-            dtype: Data type for the elements.
-            seed: Random seed for reproducibility.
-            decimals: Number of decimal places to round to.
+            data: Nested list structure.
             
         Returns:
-            New NArray instance filled with random numbers from a uniform distribution.
+            Flattened list.
         """
-        # Ensure dtype has a default value
-        dtype = dtype or float
-        
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        instance.data = instance._random_internal(shape, seed, decimals)
-        return instance
+        if not isinstance(data, (list, tuple)):
+            return [data]
+            
+        result = []
+        for item in data:
+            result.extend(self._flatten_list(item))
+            
+        return result
     
-    @classmethod
-    def randint(cls, low: int, high: int, shape: Tuple[int, ...], 
-                dtype: Optional[type] = None,
-                seed: Optional[int] = None,
-                decimals: Optional[int] = None) -> 'NArray':
+    def reshape(self, new_shape: Tuple[int, ...]) -> 'NDArray':
         """
-        Create an array filled with random integers from a uniform distribution.
+        Reshape the array to a new shape.
         
         Args:
-            low: Lower bound of the distribution (inclusive).
-            high: Upper bound of the distribution (exclusive).
-            shape: Dimensions of the array.
-            dtype: Data type for the elements.
-            seed: Random seed for reproducibility.
-            decimals: Not used for integers, but kept for API consistency.
+            new_shape: New shape for the array. One dimension can be -1, 
+                       which will be automatically calculated.
             
         Returns:
-            New NArray instance filled with random integers from a uniform distribution.
+            Reshaped NDArray.
+            
+        Raises:
+            ValueError: If the new shape is not compatible with the number of elements.
+            
+        Examples:
+            If arr has shape (6,), arr.reshape((2, 3)) will have shape (2, 3)
+            If arr has shape (6,), arr.reshape((2, -1)) will also have shape (2, 3)
         """
-        # Ensure dtype has a default value, int is more appropriate for randint
-        dtype = dtype or int
+        # Calculate total elements
+        total_elements = self._size
         
-        instance = cls(shape=shape, dtype=dtype, _internal_call=True)
-        instance.data = instance._randint_internal(low, high, shape, seed, decimals)
-        return instance
+        # Calculate the total size of new shape
+        new_elements = 1
+        for dim in new_shape:
+            if dim == -1:  # One dimension can be specified as -1
+                continue
+            new_elements *= dim
+        
+        # Check if shapes are compatible
+        if -1 in new_shape:
+            # One dimension is inferred
+            inferred_idx = new_shape.index(-1)
+            inferred_dim = total_elements // new_elements
+            new_shape_list = list(new_shape)
+            new_shape_list[inferred_idx] = inferred_dim
+            new_shape = tuple(new_shape_list)
+            new_elements *= inferred_dim
+        
+        if total_elements != new_elements:
+            raise ValueError(f"Cannot reshape array of size {total_elements} into shape {new_shape}")
+        
+        # Flatten the array and then reshape
+        flattened = self.flatten().data
+        result_data = self._reshape_list(flattened, new_shape)
+        
+        return NDArray(result_data, dtype=self._dtype)
     
-
-    # Properties with getters - now properly implemented
+    def _reshape_list(self, flat_data: List, shape: Tuple[int, ...]) -> Any:
+        """
+        Reshape a flat list into nested lists according to shape.
+        
+        Args:
+            flat_data: Flattened list of data.
+            shape: Target shape.
+            
+        Returns:
+            Nested list with the specified shape.
+        """
+        if not shape:  # Empty shape, return scalar
+            return flat_data[0] if flat_data else None
+            
+        if len(shape) == 1:
+            return flat_data[:shape[0]]
+            
+        # Multi-dimensional reshaping
+        result = []
+        items_per_sublist = 1
+        for dim in shape[1:]:
+            items_per_sublist *= dim
+            
+        for i in range(shape[0]):
+            start_idx = i * items_per_sublist
+            end_idx = start_idx + items_per_sublist
+            sublist = flat_data[start_idx:end_idx]
+            result.append(self._reshape_list(sublist, shape[1:]))
+            
+        return result
+    
+    def transpose(self) -> 'NDArray':
+        """
+        Transpose the array by reversing the order of dimensions.
+        For 2D arrays, this flips the array over its diagonal.
+        For N-dimensional arrays, this reverses the order of axes.
+        
+        Returns:
+            Transposed NDArray.
+        """
+        # Handle scalar case
+        if not self._shape:
+            return NDArray(self.data, dtype=self._dtype)
+            
+        # Handle 1D case
+        if len(self._shape) == 1:
+            return NDArray(self.data[:], dtype=self._dtype)
+        
+        # Helper function for recursive transposition
+        def recursive_transpose(matrix):
+            if not matrix:  # Handle empty arrays
+                return matrix
+            if not isinstance(matrix[0], list):  # Base case - 1D array
+                return matrix
+            return [recursive_transpose(list(row)) for row in zip(*matrix)]
+        
+        transposed_data = recursive_transpose(self.data)
+        return NDArray(transposed_data, dtype=self._dtype)
+    
+    # Properties with getters
     
     @property
     def shape(self) -> Tuple[int, ...]:
@@ -724,7 +600,7 @@ class NArray:
         return self._shape
     
     @property
-    def ndims(self) -> int:
+    def ndim(self) -> int:
         """Get the number of dimensions of the array."""
         return len(self._shape)
     
@@ -746,30 +622,30 @@ class NArray:
         dtype_name = self._dtype.__name__ if self._dtype is not None else "None"
         
         if not self._shape:  # Scalar
-            return f"NArray({self.data}, dtype={dtype_name})"
+            return f"NDArray({self.data}, dtype={dtype_name})"
             
         # For 1D arrays
         if len(self._shape) == 1:
-            return f"NArray({self.data}, dtype={dtype_name})"
+            return f"NDArray({self.data}, dtype={dtype_name})"
             
         # For multi-dimensional arrays
-        return f"NArray(shape={self._shape}, dtype={dtype_name})"
+        return f"NDArray(shape={self._shape}, dtype={dtype_name})"
     
     def __str__(self) -> str:
         """Human-readable string representation."""
-        # Ensure dtype is not None before accessing __name__
-        dtype_name = self._dtype.__name__ if self._dtype is not None else "None"
-        
-        if not self._shape or len(self._shape) == 0 or len(self._shape) == 1:  # Scalar or 1D
-            return f"NArray({self.data}, dtype={dtype_name})"
+        if not self._shape:  # Scalar
+            return str(self.data)
+            
+        # For 1D arrays
+        if len(self._shape) == 1:
+            return str(self.data)
             
         # For 2D arrays, format as a matrix
         if len(self._shape) == 2:
             rows = []
             for row in self.data:
                 rows.append("[" + ", ".join(str(x) for x in row) + "]")
-            matrix_str = "[" + ",\n ".join(rows) + "]"
-            return f"NArray({matrix_str}, dtype={dtype_name})"
+            return "[" + ",\n ".join(rows) + "]"
             
         # For higher dimensions, just show shape and type
-        return f"NArray(shape={self._shape}, dtype={dtype_name})"
+        return f"NDArray(shape={self._shape}, dtype={self._dtype.__name__})"

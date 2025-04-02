@@ -1,4 +1,3 @@
-For your NArray class, you should focus on implementing the essential operations that will serve as the foundation for all array manipulations. These operations should be universally applicable regardless of dimensions, allowing them to work seamlessly with vectors, matrices, and higher-dimensional tensors. Here's a comprehensive list of operations you should implement in the NArray base class:
 
 ### Core Element-wise Operations
 
