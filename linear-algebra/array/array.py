@@ -1155,7 +1155,25 @@ class NDArray:
             
         # Apply operation with broadcasting
         return self._broadcast_operation(other, rpow_op)
+    
+    def __neg__(self) -> 'NDArray':
+        """
+        Performs elementwise negation of all elements in the NDArray.
 
+        This method implements the unary '-' operator for NDArrays.
+        
+        Returns:
+            NDArray: A new NDArray with negated elements.
+            
+        Examples:
+            arr = NDArray([1, 2, 3])
+            -arr
+            # Output: NDArray([-1, -2, -3])
+        """
+        copy = self.data.copy()
+        if isinstance(copy, (list, tuple)):
+            return NDArray([-x for x in copy], dtype=self._dtype)
+        return NDArray(-copy, dtype=self._dtype)
 
 
 

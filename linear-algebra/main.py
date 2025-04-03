@@ -132,3 +132,9 @@ if __name__ == "__main__":
         NDArray.array([1, 2, 3]).reshape((2, 2))
     except ValueError as e:
         print(f"Expected error: {e}")
+
+    print("\nARRAY NEGATION")
+    array1 = NDArray(data=[[1, 2], [3, 4]])
+    print(f"Original array:\n{array1}")
+    negated = -array1
+    print(f"Negated array:\n{negated}")
