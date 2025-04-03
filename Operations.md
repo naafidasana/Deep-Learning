@@ -1,4 +1,3 @@
-
 ### Core Element-wise Operations
 
 1. **Basic Arithmetic Operations**

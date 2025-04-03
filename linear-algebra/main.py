@@ -10,6 +10,13 @@ if __name__ == "__main__":
     print(f"Shape: {matrix.shape}")
     print(f"Size: {matrix.size}")
     print(f"Data type: {matrix.dtype.__name__}")
+
+    # Create from scalar
+    scalar = NDArray.array(42, dtype=int)
+    print(f"\nScalar from data:\n{scalar}")
+    print(f"Shape: {scalar.shape}")
+    print(f"Size: {scalar.size}")
+    print(f"Data type: {scalar.dtype.__name__}")
     
     # Create zeros array
     zeros = NDArray.zeros((2, 3), dtype=float)

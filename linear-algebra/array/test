@@ -1,0 +1,182 @@
+from typing import Any, Callable, List, Tuple, Union
+import operator
+
+def _compute_broadcast_shape(shape1: Tuple[int, ...], shape2: Tuple[int, ...]) -> Tuple[int, ...]:
+    """Compute the resulting shape when broadcasting two arrays."""
+    # Pad shapes to the same length
+    padded_shape1 = list(shape1)
+    padded_shape2 = list(shape2)
+    
+    while len(padded_shape1) < len(padded_shape2):
+        padded_shape1.insert(0, 1)
+    while len(padded_shape2) < len(padded_shape1):
+        padded_shape2.insert(0, 1)
+    
+    # Compute the broadcast shape
+    result_shape = []
+    for s1, s2 in zip(padded_shape1, padded_shape2):
+        if s1 == s2 or s1 == 1 or s2 == 1:
+            result_shape.append(max(s1, s2))
+        else:
+            raise ValueError(f"Incompatible shapes for broadcasting: {shape1} and {shape2}")
+    
+    return tuple(result_shape)
+ 
+# Examples
+print("Compute broadcast shape:")
+print(_compute_broadcast_shape((3, 1), (4,)))  # (3, 4)  
+print(_compute_broadcast_shape((2, 1, 3), (1, 2, 3)))  # (2, 2, 3)
+
+def _apply_operation_with_scalar(array: Union[List, Any], scalar: Any, 
+                                operation: Callable[[Any, Any], Any], 
+                                scalar_on_right: bool = True) -> List:
+    """Apply an operation between an array (nested list) and a scalar efficiently."""
+    
+    def _apply_recursive(data: Union[List, Any], scalar: Any) -> Union[List, Any]:
+        """Recursively apply operation to nested lists."""
+        if isinstance(data, list):
+            # Recursive case: apply operation to each element in the list
+            return [_apply_recursive(item, scalar) for item in data]
+        else:
+            # Base case: apply operation to the scalar element
+            return operation(data, scalar) if scalar_on_right else operation(scalar, data)
+    
+    return _apply_recursive(array, scalar)
+
+
+print("\n\nApply operation with scalar:")
+array = [[1, 2], [3, 4]]  # A simple 2D array (nested list)
+scalar = 10
+
+# Test addition
+result_add = _apply_operation_with_scalar(array, scalar, operator.add, scalar_on_right=True)
+print("Addition:", result_add)  # Expected: [[11, 12], [13, 14]]
+
+# Test multiplication
+result_mul = _apply_operation_with_scalar(array, scalar, operator.mul, scalar_on_right=True)
+print("Multiplication:", result_mul)  # Expected: [[10, 20], [30, 40]]
+
+# Test power with scalar on the left
+result_pow = _apply_operation_with_scalar(array, scalar, operator.pow, scalar_on_right=False)
+print("Power:", result_pow)  # Expected: [[10**1, 10**2], [10**3, 10**4]]
+
+
+def _apply_operation_same_shape(arr1: Union[List, Any], arr2: Union[List, Any], 
+                               operation: Callable[[Any, Any], Any]) -> Union[List, Any]:
+    """Apply operation between arrays of the same shape efficiently."""
+    
+    def _apply_recursive(data1, data2):
+        """Recursively apply operation to nested lists of same shape."""
+        if not isinstance(data1, (list, tuple)):
+            # Base case: both data1 and data2 are scalars
+            return operation(data1, data2)
+        
+        # Recursive case: both are lists/tuples
+        return [_apply_recursive(item1, item2) for item1, item2 in zip(data1, data2)]
+    
+    result_data = _apply_recursive(arr1, arr2)
+    return result_data
+
+
+print("\n\nOperations between arrays of the same shape:")
+array1 = [[1, 2], [3, 4]]  # A simple 2D array (nested list)
+array2 = [[10, 20], [30, 40]]
+
+# Test addition
+result_add = _apply_operation_same_shape(array1, array2, operator.add)
+print("Addition:", result_add) 
+
+# Test multiplication
+result_mul = _apply_operation_same_shape(array1, array2, operator.mul)
+print("Multiplication:", result_mul)  
+
+# Test power
+result_pow = _apply_operation_same_shape(array1, array2, operator.pow)
+print("Power:", result_pow) 
+
+def _print_array(arr: Union[List, Any]):
+    """Print a nested list (array) in a readable format."""
+    for row in arr:
+        print(row)
+
+def _shape(arr: Union[List, Any]) -> Tuple[int, ...]:
+    """Compute the shape of a nested list (N-dimensional array)."""
+    if not isinstance(arr, list):
+        return ()
+    return (len(arr),) + _shape(arr[0]) if arr else (0,)
+
+def _get_broadcast_value(arr, indices, original_shape, broadcast_shape):
+    """Get value from an array using broadcast indices."""
+    original_indices = []
+    offset = len(broadcast_shape) - len(original_shape)
+
+    for i, dim in enumerate(original_shape):
+        idx = indices[i + offset]  # Use broadcast index
+        if dim == 1:
+            idx = 0  # Always pick the first element in dimension 1 (broadcast)
+        original_indices.append(idx)
+
+    value = arr
+    for idx in original_indices:
+        value = value[idx]
+    
+    return value
+
+print("\n\nGet broadcast value:")
+# Example arrays
+array1 = [[10, 20], [30, 40]]  # Shape: (2, 2)
+array2 = [[5], [15]]           # Shape: (2, 1) -> Broadcasted to (2, 2)
+
+broadcast_shape = (2, 2)  # Target shape after broadcasting
+
+# Test indices
+test_indices = [(0, 0), (0, 1), (1, 0), (1, 1)]
+
+print("Original Array 1:")
+_print_array(array1)
+
+print("\nOriginal Array 2 (Before Broadcasting):")
+_print_array(array2)
+
+print("\nBroadcasted Values for Array2:")
+for idx in test_indices:
+    val = _get_broadcast_value(array2, idx, _shape(array2), broadcast_shape)
+    print(f"Index {idx} -> Value: {val}")
+
+def _create_broadcast_result(arr1: Union[List, Any], arr2: Union[List, Any], 
+                            broadcast_shape: Tuple[int, ...], 
+                            operation: Callable[[Any, Any], Any]) -> Any:
+    """Create the result array by applying the operation with broadcasting."""
+    
+    def _create_nested_result(indices, depth):
+        """Recursively create the nested result structure."""
+        if depth == len(broadcast_shape):
+            value1 = _get_broadcast_value(arr1, indices, _shape(arr1), broadcast_shape)
+            value2 = _get_broadcast_value(arr2, indices, _shape(arr2), broadcast_shape)
+            return operation(value1, value2)
+        
+        return [_create_nested_result(indices + [i], depth + 1) for i in range(broadcast_shape[depth])]
+
+    return _create_nested_result([], 0)
+
+
+
+print("\n\nCreate broadcast result:")
+# 1D + 1D broadcasting
+array1 = [1, 2, 3]  
+array2 = [10]  # Broadcasts to match [1, 2, 3]
+print("1D + 1D Broadcasting (Addition):")
+_print_array(_create_broadcast_result(array1, array2, _shape(array1), operator.add))
+
+# 2D + 1D broadcasting
+array1 = [[1, 2, 3], [4, 5, 6]]
+array2 = [10, 20, 30]  # Broadcasts to match each row
+print("\n2D + 1D Broadcasting (Multiplication):")
+_print_array(_create_broadcast_result(array1, array2, _shape(array1), operator.mul))
+
+# 3D + 2D broadcasting
+array1 = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]  # (2,2,2)
+array2 = [[10, 20], [30, 40]]  # (2,2) → Broadcasts across 3D axis
+print("\n3D + 2D Broadcasting (Subtraction):")
+_print_array(_create_broadcast_result(array1, array2, _shape(array1), operator.sub))
+

@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, Optional, Any, Union, Sequence
+from typing import Callable, List, Tuple, Optional, Any, Union, Sequence
 
 class NDArray:
     """
@@ -437,11 +437,11 @@ class NDArray:
         if endpoint:
             # Include the endpoint
             step = (stop - start) / (num - 1) if num > 1 else 0
-            values = [start + i * step for i in range(num)]
         else:
             # Exclude the endpoint
             step = (stop - start) / num
-            values = [start + i * step for i in range(num)]
+        
+        values = [start + i * step for i in range(num)]
             
         # Apply dtype if provided
         if dtype:
@@ -592,6 +592,80 @@ class NDArray:
         transposed_data = recursive_transpose(self.data)
         return NDArray(transposed_data, dtype=self._dtype)
     
+    def squeeze(self) -> 'NDArray':
+        """
+        Remove all dimensions of size 1 from the array shape.
+        
+        Returns:
+            NDArray: A view of the array with all dimensions of size 1 removed.
+            
+        Examples:
+            If arr has shape (3, 1, 4, 1), arr.squeeze() will have shape (3, 4)
+            If arr has shape (1, 1, 1), arr.squeeze() will be a scalar
+            If arr has shape (3, 4), arr.squeeze() will also have shape (3, 4)
+        """
+        # For scalar arrays, return a copy
+        if not self._shape:
+            return NDArray(self.data, dtype=self._dtype)
+        
+        # Find dimensions of size 1
+        new_shape = tuple(dim for dim in self._shape if dim != 1)
+        
+        # If all dimensions were 1, return a scalar
+        if not new_shape:
+            return NDArray(self.data if isinstance(self.data, (list, tuple)) and len(self.data) > 0 else self.data[0][0], 
+                        dtype=self._dtype)
+        
+        # Otherwise, reshape to remove the dimensions of size 1
+        return self.reshape(new_shape)
+
+    def expand_dims(self, axis: int) -> 'NDArray':
+        """
+        Expand the shape of the array by inserting a new dimension of size 1 at the given position.
+        
+        Args:
+            axis: Position in the expanded axes where the new axis is placed.
+                Allowed range is [-ndim-1, ndim], where ndim is the number of dimensions
+                before expansion.
+                
+        Returns:
+            NDArray: View of the array with an additional dimension.
+            
+        Raises:
+            ValueError: If axis is out of the allowed range.
+            
+        Examples:
+            If arr has shape (3, 4):
+            - arr.expand_dims(0) will have shape (1, 3, 4)
+            - arr.expand_dims(1) will have shape (3, 1, 4)
+            - arr.expand_dims(2) will have shape (3, 4, 1)
+            - arr.expand_dims(-1) will have shape (3, 4, 1)
+        """
+        # Handle scalar case
+        if not self._shape:
+            if axis not in [0, -1]:
+                raise ValueError(f"Axis {axis} is out of bounds for scalar array")
+            # Return a 1D array with a single element
+            return NDArray([self.data], dtype=self._dtype)
+        
+        # Calculate number of dimensions
+        ndim = len(self._shape)
+        
+        # Validate axis
+        if axis < -ndim - 1 or axis > ndim:
+            raise ValueError(f"Axis {axis} is out of bounds for array of dimension {ndim}")
+        
+        # Convert negative axis to positive
+        if axis < 0:
+            axis = ndim + axis + 1
+        
+        # Create new shape by inserting 1 at the specified position
+        new_shape = list(self._shape)
+        new_shape.insert(axis, 1)
+        
+        # Reshape the array
+        return self.reshape(tuple(new_shape))
+    
     # Properties with getters
     
     @property
@@ -649,3 +723,546 @@ class NDArray:
             
         # For higher dimensions, just show shape and type
         return f"NDArray(shape={self._shape}, dtype={self._dtype.__name__})"
+ 
+    # Dunder methods --> Helpers
+    def _broadcast_operation(self, other: Union['NDArray', Any], operation: Callable[[Any, Any], Any]) -> 'NDArray':
+        """
+        Apply a binary operation with broadcasting.
+        
+        Broadcasting rules similar to NumPy:
+        1. If arrays don't have same number of dimensions, prepend shape with 1s
+        2. If shapes don't match in any dimension, one of them must be 1
+        3. In the output, each dimension is the max of the input dimensions
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            operation: Function that takes two arguments and returns the result.
+            
+        Returns:
+            NDArray: Result of the broadcasted operation.
+            
+        Raises:
+            ValueError: If shapes are incompatible for broadcasting.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Fast path 1: Both are scalars
+        if not self._shape and not other._shape:
+            return NDArray(operation(self.data, other.data))
+            
+        # Fast path 2: One is scalar, one is array
+        if not self._shape:  # self is scalar
+            return _apply_operation_with_scalar(other, self.data, operation, scalar_on_right=False)
+        if not other._shape:  # other is scalar
+            return _apply_operation_with_scalar(self, other.data, operation, scalar_on_right=True)
+            
+        # Fast path 3: Same shape arrays (no broadcasting needed)
+        if self._shape == other._shape:
+            return _apply_operation_same_shape(self, other, operation)
+            
+        # Fast path 4: Simple 1D broadcasting
+        if len(self._shape) == 1 and len(other._shape) == 1:
+            if self._shape[0] == 1:
+                # Broadcast self to other's shape
+                result = [operation(self.data[0], x) for x in other.data]
+                return NDArray(result)
+            elif other._shape[0] == 1:
+                # Broadcast other to self's shape
+                result = [operation(x, other.data[0]) for x in self.data]
+                return NDArray(result)
+        
+        # General case: n-dimensional broadcasting
+        # Calculate the broadcast shape
+        broadcast_shape = _compute_broadcast_shape(self._shape, other._shape)
+        
+        # Create the output array structure
+        result_data = _create_broadcast_result(self, other, broadcast_shape, operation)
+        
+        return NDArray(result_data)
+    
+    # Dunder methods --> Basics maths operations
+
+    # 1. Basic Arithmetic Operations
+    def __add__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise addition with broadcasting support.
+        
+        This method implements the '+' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise addition.
+            
+        Examples:
+            arr1 + arr2  # Element-wise addition of two arrays
+            arr + 5      # Add 5 to each element
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define addition operation
+        def add_op(x: Any, y: Any) -> Any:
+            return x + y
+        
+        return self._broadcast_operation(other, add_op)
+    
+    def __radd__(self, other: Any) -> 'NDArray':
+        """
+        Reverse element-wise addition with broadcasting support.
+        
+        This method implements the '+' operator between a scalar and an NDArray.
+        
+        Args:
+            other: A scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise addition.
+            
+        Examples:
+            5 + arr  # Add 5 to each element
+        """
+        return self.__add__(other)
+    
+    def __sub__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise subtraction with broadcasting support.
+        
+        This method implements the '-' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise subtraction.
+            
+        Examples:
+            arr1 - arr2  # Element-wise subtraction of two arrays
+            arr - 5      # Subtract 5 from each element
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+
+        # Define subtraction operation
+        def sub_op(x: Any, y: Any) -> Any:
+            return x - y
+        return self._broadcast_operation(other, sub_op)
+    
+    def __rsub__(self, other: Any) -> 'NDArray':
+        """
+        Reverse element-wise subtraction with broadcasting support.
+        
+        This method implements the '-' operator between a scalar and an NDArray.
+        
+        Args:
+            other: A scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise subtraction.
+            
+        Examples:
+            5 - arr  # Subtract 5 from each element
+        """
+        return self.__sub__(other)
+
+    def __mul__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise multiplication with broadcasting support.
+        
+        This method implements the '*' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise multiplication.
+            
+        Examples:
+            arr1 * arr2  # Element-wise multiplication
+            arr * 5      # Multiply each element by 5
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define multiplication operation
+        def mul_op(x: Any, y: Any) -> Any:
+            return x * y
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, mul_op)
+        
+    def __rmul__(self, other: Any) -> 'NDArray':
+        """
+        Reverse multiplication (for scalar * array).
+        
+        This method is called when a non-NDArray is on the left side of the '*' operator.
+        
+        Args:
+            other: A scalar value or non-NDArray object.
+            
+        Returns:
+            NDArray: Result of element-wise multiplication.
+            
+        Examples:
+            5 * arr  # Multiply each element by 5
+        """
+        return self.__mul__(other)
+        
+    def __truediv__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise true division with broadcasting support.
+        
+        This method implements the '/' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise division.
+            
+        Examples:
+            arr1 / arr2  # Element-wise division
+            arr / 5      # Divide each element by 5
+            
+        Raises:
+            ZeroDivisionError: If division by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define division operation
+        def div_op(x: Any, y: Any) -> Any:
+            if y == 0:
+                raise ZeroDivisionError("division by zero")
+            return x / y
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, div_op)
+        
+    def __rtruediv__(self, other: Any) -> 'NDArray':
+        """
+        Reverse true division (for scalar / array).
+        
+        This method is called when a non-NDArray is on the left side of the '/' operator.
+        
+        Args:
+            other: A scalar value or non-NDArray object.
+            
+        Returns:
+            NDArray: Result of element-wise division.
+            
+        Examples:
+            5 / arr  # Divide 5 by each element
+            
+        Raises:
+            ZeroDivisionError: If division by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define reverse division operation
+        def rdiv_op(x: Any, y: Any) -> Any:
+            if x == 0:
+                raise ZeroDivisionError("division by zero")
+            return y / x
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, rdiv_op)
+        
+    def __floordiv__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise floor division with broadcasting support.
+        
+        This method implements the '//' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise floor division.
+            
+        Examples:
+            arr1 // arr2  # Element-wise floor division
+            arr // 5      # Floor divide each element by 5
+            
+        Raises:
+            ZeroDivisionError: If division by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define floor division operation
+        def floordiv_op(x: Any, y: Any) -> Any:
+            if y == 0:
+                raise ZeroDivisionError("division by zero")
+            return x // y
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, floordiv_op)
+        
+    def __rfloordiv__(self, other: Any) -> 'NDArray':
+        """
+        Reverse floor division (for scalar // array).
+        
+        This method is called when a non-NDArray is on the left side of the '//' operator.
+        
+        Args:
+            other: A scalar value or non-NDArray object.
+            
+        Returns:
+            NDArray: Result of element-wise floor division.
+            
+        Examples:
+            5 // arr  # Floor divide 5 by each element
+            
+        Raises:
+            ZeroDivisionError: If division by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define reverse floor division operation
+        def rfloordiv_op(x: Any, y: Any) -> Any:
+            if x == 0:
+                raise ZeroDivisionError("division by zero")
+            return y // x
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, rfloordiv_op)
+        
+    def __mod__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise modulo operation with broadcasting support.
+        
+        This method implements the '%' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise modulo.
+            
+        Examples:
+            arr1 % arr2  # Element-wise modulo
+            arr % 5      # Modulo each element by 5
+            
+        Raises:
+            ZeroDivisionError: If modulo by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define modulo operation
+        def mod_op(x: Any, y: Any) -> Any:
+            if y == 0:
+                raise ZeroDivisionError("modulo by zero")
+            return x % y
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, mod_op)
+        
+    def __rmod__(self, other: Any) -> 'NDArray':
+        """
+        Reverse modulo (for scalar % array).
+        
+        This method is called when a non-NDArray is on the left side of the '%' operator.
+        
+        Args:
+            other: A scalar value or non-NDArray object.
+            
+        Returns:
+            NDArray: Result of element-wise modulo.
+            
+        Examples:
+            5 % arr  # Modulo 5 by each element
+            
+        Raises:
+            ZeroDivisionError: If modulo by zero occurs.
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define reverse modulo operation
+        def rmod_op(x: Any, y: Any) -> Any:
+            if x == 0:
+                raise ZeroDivisionError("modulo by zero")
+            return y % x
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, rmod_op)
+        
+    def __pow__(self, other: Any) -> 'NDArray':
+        """
+        Element-wise power operation with broadcasting support.
+        
+        This method implements the '**' operator between two NDArrays or an NDArray and a scalar.
+        
+        Args:
+            other: Another NDArray or a scalar value.
+            
+        Returns:
+            NDArray: Result of element-wise power.
+            
+        Examples:
+            arr1 ** arr2  # Element-wise power
+            arr ** 2      # Square each element
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define power operation
+        def pow_op(x: Any, y: Any) -> Any:
+            return x ** y
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, pow_op)
+        
+    def __rpow__(self, other: Any) -> 'NDArray':
+        """
+        Reverse power (for scalar ** array).
+        
+        This method is called when a non-NDArray is on the left side of the '**' operator.
+        
+        Args:
+            other: A scalar value or non-NDArray object.
+            
+        Returns:
+            NDArray: Result of element-wise power.
+            
+        Examples:
+            2 ** arr  # Raise 2 to the power of each element
+        """
+        # Handle scalar case
+        if not isinstance(other, NDArray):
+            other = NDArray(other)
+            
+        # Define reverse power operation
+        def rpow_op(x: Any, y: Any) -> Any:
+            return y ** x
+            
+        # Apply operation with broadcasting
+        return self._broadcast_operation(other, rpow_op)
+
+
+
+
+
+# Helpers
+def _apply_operation_with_scalar(array: 'NDArray', scalar: Any, 
+                                operation: Callable[[Any, Any], Any], 
+                                scalar_on_right: bool) -> 'NDArray':
+    """Apply operation between array and scalar efficiently."""
+    
+    def _apply_recursive(data, scalar):
+        """Recursively apply operation to nested lists."""
+        if not isinstance(data, (list, tuple)):
+            # Base case: data is a scalar
+            return operation(data, scalar) if scalar_on_right else operation(scalar, data)
+        
+        # Recursive case: data is a list/tuple
+        return [_apply_recursive(item, scalar) for item in data]
+    
+    result_data = _apply_recursive(array.data, scalar)
+    return NDArray(result_data)
+
+
+def _apply_operation_same_shape(arr1: 'NDArray', arr2: 'NDArray', 
+                               operation: Callable[[Any, Any], Any]) -> 'NDArray':
+    """Apply operation between arrays of the same shape efficiently."""
+    
+    def _apply_recursive(data1, data2):
+        """Recursively apply operation to nested lists of same shape."""
+        if not isinstance(data1, (list, tuple)):
+            # Base case: both data1 and data2 are scalars
+            return operation(data1, data2)
+        
+        # Recursive case: both are lists/tuples
+        return [_apply_recursive(item1, item2) for item1, item2 in zip(data1, data2)]
+    
+    result_data = _apply_recursive(arr1.data, arr2.data)
+    return NDArray(result_data)
+
+
+def _compute_broadcast_shape(shape1: Tuple[int, ...], shape2: Tuple[int, ...]) -> Tuple[int, ...]:
+    """Compute the resulting shape when broadcasting two arrays."""
+    # Pad shapes to the same length
+    padded_shape1 = list(shape1)
+    padded_shape2 = list(shape2)
+    
+    while len(padded_shape1) < len(padded_shape2):
+        padded_shape1.insert(0, 1)
+    while len(padded_shape2) < len(padded_shape1):
+        padded_shape2.insert(0, 1)
+    
+    # Compute the broadcast shape
+    result_shape = []
+    for s1, s2 in zip(padded_shape1, padded_shape2):
+        if s1 == s2 or s1 == 1 or s2 == 1:
+            result_shape.append(max(s1, s2))
+        else:
+            raise ValueError(f"Incompatible shapes for broadcasting: {shape1} and {shape2}")
+    
+    return tuple(result_shape)
+
+
+def _create_broadcast_result(arr1: 'NDArray', arr2: 'NDArray', 
+                            broadcast_shape: Tuple[int, ...], 
+                            operation: Callable[[Any, Any], Any]) -> Any:
+    """Create the result array by applying the operation with broadcasting."""
+    
+    def _get_broadcast_value(arr, indices, original_shape):
+        """Get value from array using broadcast indices."""
+        # Convert broadcast indices to original indices
+        original_indices = []
+        offset = len(broadcast_shape) - len(original_shape)
+        
+        for i, dim in enumerate(original_shape):
+            # If dimension is 1, use index 0 (broadcasting)
+            # Otherwise use the corresponding broadcast index
+            idx = indices[i + offset]
+            if dim == 1:
+                idx = 0
+            original_indices.append(idx)
+        
+        # Navigate to the value using indices
+        value = arr.data
+        for idx in original_indices:
+            value = value[idx]
+        
+        return value
+    
+    def _create_nested_result(indices, depth):
+        """Recursively create the nested result structure."""
+        if depth == len(broadcast_shape):
+            # We've reached the target depth, compute the value
+            value1 = _get_broadcast_value(arr1, indices, arr1._shape)
+            value2 = _get_broadcast_value(arr2, indices, arr2._shape)
+            return operation(value1, value2)
+        
+        # Create a list for this dimension
+        result = []
+        for i in range(broadcast_shape[depth]):
+            indices[depth] = i
+            result.append(_create_nested_result(indices, depth + 1))
+        
+        return result
+    
+    # Initialize indices and create the result
+    indices = [0] * len(broadcast_shape)
+    return _create_nested_result(indices, 0)
+
+
+    
